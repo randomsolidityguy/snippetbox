@@ -7,9 +7,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"snippetbox.randomsolidityguy.net/internal/models"
 
+	"github.com/alexedwards/scs/mysqlstore"
+	"github.com/alexedwards/scs/v2"
 	"github.com/go-playground/form/v4"
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -20,6 +23,7 @@ type application struct {
 	snippets *models.SnippetModel
 	templateCache map[string]*template.Template
 	formDecoder *form.Decoder
+	sessionManager *scs.SessionManager
 }
 
 
@@ -27,7 +31,6 @@ func main() {
 	// Command-line flag
 	addr := flag.String("addr", ":4000", "HTTP network address")
 	dsn := flag.String("dsn", "web:hejsan123@/snippetbox?parseTime=true", "MySQL data source name")
-
 
 	// Parse command-line flag
 	flag.Parse()
@@ -52,6 +55,10 @@ func main() {
 
 	formDecoder := form.NewDecoder()
 
+	sessionManager := scs.New()
+	sessionManager.Store = mysqlstore.New(db)
+	sessionManager.Lifetime = 12 * time.Hour
+
 
 	// Initialize new instance of application struct containing dependencies
 	app := &application{
@@ -60,6 +67,7 @@ func main() {
 		snippets: &models.SnippetModel{DB: db},
 		templateCache: templateCache,
 		formDecoder: formDecoder,
+		sessionManager: sessionManager,
 	}
 
 	// Starting server
